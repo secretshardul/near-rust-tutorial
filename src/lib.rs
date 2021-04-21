@@ -49,8 +49,59 @@ fn check_overflow() {
 
 #[cfg(test)]
 mod tests {
+    // Testing boilerplate
+    use super::*;
+    use near_sdk::MockedBlockchain;
+    use near_sdk::{testing_env, VMContext};
+
+    // Context initializer function
+    fn get_context(input: Vec<u8>, is_view: bool) -> VMContext {
+        VMContext {
+            current_account_id: "alice.testnet".to_string(),
+            signer_account_id: "robert.testnet".to_string(),
+            signer_account_pk: vec![0, 1, 2],
+            predecessor_account_id: "jane.testnet".to_string(),
+            input,
+            block_index: 0,
+            block_timestamp: 0,
+            account_balance: 0,
+            account_locked_balance: 0,
+            storage_usage: 0,
+            attached_deposit: 0,
+            prepaid_gas: 10u64.pow(18),
+            random_seed: vec![0, 1, 2],
+            is_view,
+            output_data_receivers: vec![],
+            epoch_height: 19,
+        }
+    }
+
+    // Test cases here
     #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
+    fn increment() {
+        // Initialize context
+        let context = get_context(vec![], false);
+        testing_env!(context);
+
+        // Operate on contract data
+        let mut contract = Counter { val: 0 };
+        contract.increment();
+
+        // Compare with expected output
+        assert_eq!(1, contract.val);
+    }
+
+    #[test]
+    fn decrement() {
+        // Initialize context
+        let context = get_context(vec![], false);
+        testing_env!(context);
+
+        // Operate on contract data
+        let mut contract = Counter { val: 1 };
+        contract.decrement();
+
+        // Compare with expected output
+        assert_eq!(0, contract.val);
     }
 }

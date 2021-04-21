@@ -37,6 +37,10 @@ near call monkeyis.testnet decrement --accountId monkeyis.testnet
 near view monkeyis.testnet get_num --accountId monkeyis.testnet
 ```
 
+## Testing
+
+Look at [src/lib.rs](./src/lib.rs) for boilerplate and test code structure. Run tests using `cargo test` command or by pressing run test buttons inside VS Code.
+
 ## Rust notes
 
 ### Rust binary vs library
