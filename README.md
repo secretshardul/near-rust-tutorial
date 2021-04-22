@@ -82,6 +82,31 @@ near call counter.monkeyis.testnet deploy_contract '{ "account_id": "gg.counter.
 near view gg.counter.monkeyis.testnet get_message --accountId monkeyis.testnet
 ```
 
+### 2. Transfer money to and between contracts
+
+**Code**
+
+```rs
+#[payable] // Attribute is needed to accept payments. Methods are non-payable by default.
+pub fn transfer_money(&mut self, account_id: String) {
+   let deposit = env::attached_deposit(); // Read transferred amount
+
+   // Contract to contract transfer
+   Promise::new(account_id).transfer(
+      deposit
+   );
+}
+```
+
+We are making two transfers here:
+- **Transfer from user's account to contract**
+
+   ```sh
+   near call counter.monkeyis.testnet transfer_money '{ "account_id": "gg.counter.monkeyis.testnet" }' --accountId counter.monkeyis.testnet --amount 2
+   ```
+
+- **Contract to contract transfer**
+
 ## Rust notes
 
 ### Rust binary vs library

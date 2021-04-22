@@ -51,11 +51,17 @@ impl Counter {
             );
     }
 
-    pub fn deploy_contract_fixed(&self) {
-        Promise::new("fixed.contract.deploy".to_string())
-            .create_account()
-            .transfer(1000)
-            .add_full_access_key(env::signer_account_pk());
+    #[payable] // Attribute is needed to accept payments. Methods are non-payable by default.
+    pub fn transfer_money(&mut self, account_id: String) {
+        let deposit = env::attached_deposit(); // Read transferred amount
+
+        let log_message = format!("Attached deposit {}", deposit);
+        env::log(log_message.as_bytes());
+
+        // Contract to contract transfer
+        Promise::new(account_id).transfer(
+            deposit
+        );
     }
 }
 
