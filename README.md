@@ -23,9 +23,12 @@ Look at [src/lib.rs](./src/lib.rs) for notes.
 # Compile
 env 'RUSTFLAGS=-C link-arg=-s' cargo build --target wasm32-unknown-unknown --release
 
+# Create deployment account (optional)
+near create-account counter.monkeyis.testnet --masterAccount=monkeyis.testnet  --initialBalance 10000000
+
 # Deploy contract to account
 # Unlike Ethereum, the contract gets deployed to the same account
-near deploy --wasmFile target/wasm32-unknown-unknown/release/near_rust_tutorial.wasm --accountId monkeyis.testnet
+near deploy --wasmFile target/wasm32-unknown-unknown/release/near_rust_tutorial.wasm --accountId counter.monkeyis.testnet
 
 # Calling contract functions
 
@@ -40,6 +43,44 @@ near view monkeyis.testnet get_num --accountId monkeyis.testnet
 ## Testing
 
 Look at [src/lib.rs](./src/lib.rs) for boilerplate and test code structure. Run tests using `cargo test` command or by pressing run test buttons inside VS Code.
+
+## Cross contract functionality
+
+### 1. Deploying another contract
+
+Instances of contract B will be deployed by contract A.
+
+1. Write and compile contract B in a separate folder.
+2. Copy the compiled `.wasm` file to contract A's directory
+3. Source code to deploy contract from contract:
+
+   ```rs
+    pub fn deploy_contract(&self, account_id: String, amount: U128) {
+        Promise::new(account_id)
+            .create_account()
+            .transfer(amount.0)
+            .add_full_access_key(env::signer_account_pk())
+            .deploy_contract(
+                /* Path to compiled .wasm file of contract  */
+                include_bytes!("./postbox_contract.wasm").to_vec(),
+            );
+    }
+   ```
+
+**Note**: A newly created account must be under a namespace of the creator account. Suppose contract A is deployed to `A.testnet` then B must be deployed to `B.A.testnet`. Otherwise `CreateAccountNotAllowed` will be thrown.
+
+4. Call the `deploy_contract` function on deployed contract `counter.monkeyis.testnet`
+
+```sh
+# Deploy contract to address crossctr.counter.monkeyis.testnet with starting balance of 10 Near
+near call counter.monkeyis.testnet deploy_contract '{ "account_id": "gg.counter.monkeyis.testnet", "amount": "10000000000000000000000000" }' --accountId counter.monkeyis.testnet
+```
+
+5. Querying the newly created contract
+
+```sh
+near view gg.counter.monkeyis.testnet get_message --accountId monkeyis.testnet
+```
 
 ## Rust notes
 

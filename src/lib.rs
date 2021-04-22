@@ -1,7 +1,10 @@
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize}; // For IO serialization and deserialization
+use near_sdk::{borsh::{self, BorshDeserialize, BorshSerialize}, json_types::U128}; // For IO serialization and deserialization
 use near_sdk::{
      env, // Like context, provides info about caller
-     near_bindgen
+     near_bindgen,
+
+     // Cross contract calls
+     Promise
 };
 
 // Boilerplate for memory management
@@ -35,6 +38,24 @@ impl Counter {
         self.val -= 1;
         let log_message = format!("Decremented to {}", self.val);
         env::log(log_message.as_bytes());
+    }
+
+    pub fn deploy_contract(&self, account_id: String, amount: U128) {
+        Promise::new(account_id)
+            .create_account()
+            .transfer(amount.0)
+            .add_full_access_key(env::signer_account_pk())
+            .deploy_contract(
+                /* Path to compiled .wasm file of contract  */
+                include_bytes!("./postbox_contract.wasm").to_vec(),
+            );
+    }
+
+    pub fn deploy_contract_fixed(&self) {
+        Promise::new("fixed.contract.deploy".to_string())
+            .create_account()
+            .transfer(1000)
+            .add_full_access_key(env::signer_account_pk());
     }
 }
 
