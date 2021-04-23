@@ -23,7 +23,8 @@ pub struct Postbox {
 #[near_bindgen]
 impl Postbox {
     pub fn get_message(&self) -> u8 {
-        env::log("Returning count".as_bytes());
+        let log_message = format!("Returning mesage {}", self.message);
+        env::log(log_message.as_bytes());
         return self.message;
     }
 

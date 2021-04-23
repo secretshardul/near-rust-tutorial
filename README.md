@@ -107,6 +107,120 @@ We are making two transfers here:
 
 - **Contract to contract transfer**
 
+### 3. Cross contract calls using high level API
+
+Two types of calls are possible:
+- **Update state** of callee contract
+- **Read state** of callee contract: We can either
+   - Just return the obtained value
+   - Perform computation on this value and return the result.
+
+### Updating state of callee contract
+
+1. Create a trait with `#[ext_contract]` which contains method signatures of callee contract.
+
+   ```rs
+   #[ext_contract]
+   pub trait Postbox {
+      fn set_message(&mut self, message: u8);
+      fn get_message(&self) -> u8;
+   }
+   ```
+
+2. This generates a snake case namespace which lets us call the other contract.
+
+   ```rs
+   postbox_contract::set_message(
+      message, // Parameters for set_message() function
+      &account_id, // Postbox contract address
+      0, // Amount to send
+      env::prepaid_gas() / 2 // Gas
+   );
+   ```
+
+3. Trigger this call using Near CLI
+
+   ```sh
+   near call counter.monkeyis.testnet set_postbox_message '{ "account_id": "gg.counter.monkeyis.testnet", "message": 5 }' --accountId counter.monkeyis.testnet
+   ```
+
+### Reading value from callee contract
+
+1. To just read and return the value:
+
+   ```rs
+    pub fn get_postbox_message(&self, account_id: String) -> Promise {
+        // Read from postbox contract and return value as result
+        postbox::get_message(
+            &account_id,
+            0,
+            env::prepaid_gas() / 2
+        )
+    }
+   ```
+
+   ```sh
+   near call counter.monkeyis.testnet get_postbox_message '{ "account_id": "gg.counter.monkeyis.testnet" }' --accountId monkeyis.testnet
+   ```
+
+   **Note**: Return type must be `Promise`
+
+2. To perform operations on the returned value, we need a callback to handle the promise.
+
+   - Create a trait for the current contract, containing signature of the callback function.
+
+   ```rs
+   #[ext_contract]
+   pub trait Counter {
+      #[result_serializer(borsh)]
+      fn postbox_callback(
+         &self,
+         #[callback]
+         message: u8
+      ) -> u8;
+   }
+   ```
+
+   - `PromiseOrValue`, `then()` and `into()` are used to pass the results into the callback function
+
+   ```rs
+   pub fn process_postbox_message(&self, account_id: String) -> PromiseOrValue<u8> {
+      let call_fee = env::prepaid_gas() / 4;
+
+      postbox::get_message(
+         &account_id,
+         0,
+         call_fee
+      ).then(counter::postbox_callback(
+         // then() automatically passes the results into current_account_id()
+         // No need to explicitly specify the parameters
+         &env::current_account_id(),
+         0,
+         call_fee
+      )).into() // convert Promise into PromiseOrValue<u8>
+   }
+   ```
+
+   - Create the callback function. Note use use of `#[callback]` attribute.
+
+   ```rs
+   #[private] // Should be callable from current contract
+   pub fn postbox_callback(
+      &self,
+      #[callback] // Necessary for then() to pass results into this function
+      message: u8
+   ) -> u8 {
+      log!("Got postbox message {:?}", message);
+
+      message + 1
+   }
+   ```
+
+#### TODO
+
+- Is it possible to use the callback function without creating a trait for the contract? The contract implementation already contains the callback function signature.
+- The docs use `#[result_serializer(borsh)]` and `#[serializer(borsh)]` to optimize the callback function. This was skipped due to number conversion issue when logging (0 -> 48), although correct value was returned. Near SDK falls back to JSON serializer by default. Find how to implement this. https://github.com/near/near-sdk-rs/blob/97fc632fcc58eb7ff7faad0be54ea8ec91dbf694/examples/cross-contract-high-level/src/lib.rs#L98
+
 ## Rust notes
 
 ### Rust binary vs library
